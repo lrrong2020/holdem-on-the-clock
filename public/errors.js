@@ -1,0 +1,40 @@
+const chinese = {
+  'Use a name of 1–32 characters.': '请输入 1 至 32 个字符的昵称。',
+  'That name is already in use.': '桌上已有同名成员，请换一个昵称。',
+  'Room expired.': '本场已结束。',
+  'Join the room to continue.': '请先申请入座。',
+  'Room has too many pending participants.': '等待审批的人数已满，请稍后再试。',
+  'All nine seats are occupied.': '九个座位均已占用。有空位后再批准。',
+  'Enter a positive amount in tenths of a BB.':
+    '请输入大于零的筹码数，精确到 0.1 BB。',
+  'Amount exceeds supported chip precision.': '该金额超出可精确计算的范围。',
+  'Choose a legal action.': '请选择当前允许的行动。',
+  'Host approval required.': '此操作需要房主批准。',
+  'Timer settings out of range.': '请检查行动时间、时间卡数量和每张卡的时长。',
+  'Enter an Ollama Cloud key.': '请填写 Ollama Cloud 密钥。',
+  'Enter a primary model.': '请填写主模型名称。',
+  'Invalid fallback model.': '请检查备用模型名称。',
+  'Configure Ollama Cloud first.': '请先配置 Ollama Cloud。',
+  'Request has expired.': '这条申请已失效。',
+  'Rebuy is available after busting.': '筹码为 0 时才能申请重新买入。',
+  'Select a guest or opponent.': '请选择其他成员或 AI。',
+  'Select a seated or standing player.': '请选择已入场的玩家。',
+  'Adjust this stack between hands.': '本手结束后可调整该玩家的筹码。',
+  'At least two occupied seats are needed.': '至少两位玩家入座后才能发牌。',
+  'This turn has already changed.': '本次行动已结束，请查看最新牌局。',
+  'Take a seat first.': '请先入座。',
+  'Hand unavailable.': '未找到这手牌的牌谱。',
+  'Hand unavailable': '未找到这手牌的牌谱。',
+  'Invalid target': '下注或加注金额超出本轮允许的范围。',
+  'Not your turn': '还没轮到你行动。',
+  'Illegal action': '当前无法执行这个动作。',
+  'Please wait before opening another session.': '操作较频繁，请稍后再试。',
+  'Server is full.': '服务已满，请稍后再试。',
+  'Invalid invitation.': '邀请链接无效。',
+  'Room already exists.': '这个房间已经开启，请刷新后申请入座。',
+  'Room unavailable.': '房间已关闭或邀请链接无效。',
+  'Server error.': '服务器暂时无法处理操作。'
+};
+export function localizedError(message, language) {
+  return language === 'zh' ? chinese[message] || message : message;
+}

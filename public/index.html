@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#f6f6f9" />
+    <meta name="referrer" content="no-referrer" />
+    <title>Release readiness · Folio</title>
+    <link rel="icon" href="/folio.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/app.css" />
+    <link rel="stylesheet" href="/game.css" />
+    <link rel="stylesheet" href="/terminal.css" />
+    <link rel="stylesheet" href="/document.css" />
+    <link rel="stylesheet" href="/history.css" />
+    <link rel="stylesheet" href="/chat.css" />
+    <link rel="stylesheet" href="/splitter.css" />
+  </head>
+  <body>
+    <div id="workspace">
+      <aside id="sidebar" aria-label="Sidebar"></aside>
+      <folio-splitter data-split="sidebar"></folio-splitter>
+      <main id="main">
+        <header id="topbar"></header>
+        <div id="connection" role="status" hidden></div>
+        <div id="view"></div>
+      </main>
+    </div>
+    <button id="shade" aria-label="Close sidebar" hidden></button>
+    <dialog id="dialog"><div id="dialog-content"></div></dialog>
+    <div id="notice" role="status" aria-live="polite" hidden></div>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

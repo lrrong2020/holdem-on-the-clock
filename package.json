@@ -1,0 +1,20 @@
+{
+  "name": "holdem-on-the-clock",
+  "version": "1.0.0",
+  "license": "Apache-2.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20.3"
+  },
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test test/*.test.mjs",
+    "test:e2e": "node test/browser.mjs && node test/nine-seat-browser.mjs && node test/editor-browser.mjs && node test/review-browser.mjs && node test/focus-browser.mjs chromium && node test/workspace-browser.mjs chromium && node test/divider-browser.mjs chromium",
+    "start:online": "node scripts/online.mjs",
+    "test:webkit": "node test/webkit-browser.mjs && node test/focus-browser.mjs webkit && node test/workspace-browser.mjs webkit && node test/divider-browser.mjs webkit"
+  },
+  "devDependencies": {
+    "playwright": "1.63.0"
+  }
+}

@@ -1,0 +1,89 @@
+folio-splitter {
+  display:none;
+  touch-action:none;
+  cursor:col-resize;
+  user-select:none;
+  -webkit-user-select:none;
+  position:relative;
+  min-width:0;
+  align-self:stretch;
+  z-index:1;
+}
+folio-splitter::before {
+  content:"";
+  position:absolute;inset:0 auto 0 50%;width:1px;
+  background:var(--gw-line,var(--border));
+}
+folio-splitter::after {
+  content:"";
+  display:block;position:sticky;top:48vh;margin-inline:auto;
+  width:3px;height:24px;border-radius:2px;
+  background:var(--muted);opacity:.45;
+}
+folio-splitter:hover::before,folio-splitter:focus-visible::before,
+folio-splitter[data-dragging]::before {
+  width:3px;transform:translateX(-1px);background:var(--accent);
+}
+folio-splitter:is(:hover,:focus-visible,[data-dragging])::after {
+  background:var(--accent);opacity:1;
+}
+folio-splitter:focus-visible {outline:2px solid var(--accent);outline-offset:-2px}
+#workspace[data-split-mode=inline],
+.gw-doc-columns[data-split-mode=inline],
+.gw-term-columns[data-split-mode=inline],
+.gw-tool-body[data-split-mode=inline] {
+  display:grid;
+  grid-template-columns:minmax(0,min(var(--folio-first),max(0px,calc(100% - var(--folio-gutter) - var(--folio-second-min))))) var(--folio-gutter) minmax(0,1fr);
+  column-gap:0;
+}
+[data-split-mode=inline] > folio-splitter {display:block}
+#workspace > folio-splitter {position:sticky;top:0;height:100dvh;z-index:5;background:var(--side)}
+#workspace[data-split-mode=inline] > #sidebar {border-right:0}
+.gw-term-columns[data-split-mode=inline] > .gw-watch {border-left:0}
+.gw-doc-columns[data-split-mode=stacked], .gw-term-columns[data-split-mode=stacked] {
+  display:flex;flex-direction:column;
+}
+.gw-doc-columns[data-split-mode=stacked] {padding:12px;gap:12px}
+.gw-doc-columns[data-split-mode=stacked] > :is(.gw-paper,.gw-review),
+.gw-term-columns[data-split-mode=stacked] > :is(.gw-term-code,.gw-watch) {width:100%}
+.gw-doc-columns[data-split-mode=stacked] > .gw-review {order:-1;max-height:min(53dvh,calc(100dvh - var(--review-top) - 3rem))}
+.gw-term-columns[data-split-mode=stacked] > .gw-watch {order:-1;border:0;border-bottom:1px solid var(--gw-line)}
+.gw-tool-body > [data-seat-pane],.gw-tool-body > [data-hand-pane] {min-width:0}
+.gw-tool-body[data-split-mode=inline] :is(.gw-hand-live,.gw-wait) {padding:0 0 0 3px;border:0}
+.gw-tool-body[data-split-mode=stacked] {grid-template-columns:minmax(0,1fr);gap:10px}
+.gw-tool-body[data-split-mode=stacked] :is(.gw-hand-live,.gw-wait) {padding:9px 0 0;border:0;border-top:1px solid var(--gw-line)}
+
+/* The viewport and container can resize before JS observes them. Let the
+   responsive layout take effect in the very first layout pass. */
+.gw-terminal {container:terminal-space / inline-size}
+.gw-tool-body {container:table-space / inline-size}
+@media(max-width:780px) {
+  #workspace[data-split-mode] {grid-template-columns:minmax(0,1fr)}
+  #workspace > folio-splitter {display:none}
+}
+@container document-space (max-width:672px) {
+  .gw-doc-columns[data-split-mode] {display:flex;flex-direction:column}
+  .gw-doc-columns[data-split-mode] > folio-splitter {display:none}
+}
+@media(max-width:700px) {
+  .gw-term-columns[data-split-mode] {display:flex;flex-direction:column}
+  .gw-term-columns[data-split-mode] > folio-splitter {display:none}
+}
+@container terminal-space (width < 520px) {
+  .gw-term-columns[data-split-mode] {display:flex;flex-direction:column}
+  .gw-term-columns[data-split-mode] > folio-splitter {display:none}
+  .gw-term-columns[data-split-mode] > .gw-watch {order:-1;border:0;border-bottom:1px solid var(--gw-line)}
+}
+@container table-space (width < 480px) {
+  .gw-tool-body > [data-seat-pane],.gw-tool-body > [data-hand-pane] {grid-column:1 / -1}
+  .gw-tool-body[data-split-mode] > folio-splitter {display:none}
+}
+@media(max-width:530px) {
+  .gw-tool-body[data-split-mode] {grid-template-columns:minmax(0,1fr)}
+  .gw-tool-body[data-split-mode] > folio-splitter {display:none}
+}
+@media(pointer:coarse) {
+  folio-splitter::before {width:2px}
+  /* Extend the touch target on either side of the narrow visual divider. */
+  folio-splitter {margin-inline:-6px}
+}

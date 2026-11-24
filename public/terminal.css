@@ -1,0 +1,84 @@
+.gw-term-code {
+  background: #191e26;
+  overflow: hidden;
+}
+.gw-term-code folio-terminal {
+  --term-row-height: 1.36rem;
+  display: block;
+  min-width: 0;
+  font: 13px/1.6 "IBM Plex Mono", Menlo, Consolas, monospace;
+}
+.term-path {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1em;
+  color: #a5afbd;
+  border-bottom: 1px solid #373f4b;
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+}
+.term-path button {
+  appearance: none;
+  color: #abb5c3;
+  background: transparent;
+  border: 1px solid #414b59;
+  border-radius: 4px;
+  width: 30px;
+  height: 26px;
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+}
+.term-path button:hover, .term-path button:focus-visible {
+  color: #e4e9f0;
+  background: #303846;
+}
+.term-path button::before {
+  content: "";
+  box-sizing: border-box;
+  width: 7px;
+  height: 9px;
+  border-inline: 2px solid currentColor;
+}
+.term-path button[data-icon="play"]::before {
+  width: 0;
+  height: 0;
+  border: solid transparent;
+  border-width: 5px 0 5px 7px;
+  border-left-color: currentColor;
+}
+.term-log {
+  height: calc(22 * var(--term-row-height));
+  overflow: hidden;
+  overflow-anchor: none;
+  color: #b9c4d3;
+}
+.term-row {
+  height: var(--term-row-height);
+  line-height: var(--term-row-height);
+  white-space: pre;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
+}
+.term-command { color: #edf2f6; }
+.term-command::before { content: "$ "; color: #94cbb3; }
+folio-terminal[data-playing] .term-command:last-child::after {
+  content: "";
+  display: inline-block;
+  width: .53em;
+  height: 1.02em;
+  background: #a8bcb1;
+  vertical-align: -.12em;
+}
+.term-branch { color: #aebfe8; }
+.term-muted { color: #97a3b5; }
+.term-success, .term-added { color: #a4cdb0; }
+.term-removed { color: #dcaaa0; }
+.term-progress { color: #b6cadc; }
+@media(max-width:700px) {
+  .gw-term-code folio-terminal { --term-row-height: 1.32rem; }
+  .term-log { height: calc(14 * var(--term-row-height)); }
+  .term-row:nth-last-child(n+15) { display:none; }
+}
