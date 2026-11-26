@@ -10,7 +10,9 @@ Your friend raises to 6 BB from a terminal full of test results. You call from t
 
 ## Downloads
 
-安装包内置 Kernel v2，离线也能单挑。选你的电脑下载。 / Download the installer for your computer to play heads-up against Kernel v2 offline.
+安装包内置 Kernel v2，离线也能单挑。它的训练代码和模型权重都来自 [lrrong2020/low-fi-poker-bot][kernel-source]。
+
+Each installer includes Kernel v2 for offline heads-up play. Its training code and model weights come from [lrrong2020/low-fi-poker-bot][kernel-source].
 
 | 电脑 / Computer | 安装包 / Installer |
 | --- | --- |
@@ -242,6 +244,7 @@ Kernel 服务启动后，可用 `npm run test:kernel` 在浏览器中对战真�
 
 The game uses Apache License 2.0. The bundled Markdown parser, Marked, uses the MIT license. [LICENSE](./LICENSE) · [NOTICE](./NOTICE) · [Marked notices](./public/vendor/marked-LICENSE.md)
 
+[kernel-source]: https://github.com/lrrong2020/low-fi-poker-bot
 [node]: https://nodejs.org/en/download
 [zip]: https://github.com/lrrong2020/holdem-on-the-clock/archive/refs/heads/main.zip
 [cf-arm]: https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-arm64.pkg
