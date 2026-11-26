@@ -444,7 +444,7 @@ button svg {
 }
 .mode-choices {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(min(115px, 100%), 1fr));
   gap: 9px;
 }
 .mode-choices label {

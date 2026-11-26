@@ -242,6 +242,7 @@ function renderShell() {
     me?.status,
     me?.host,
     state?.requests?.length,
+    state?.kernelMode,
     record,
     roomId,
     expired
@@ -255,12 +256,11 @@ function renderShell() {
   const profile = me?.name || t('Personal workspace', '个人工作区');
   $('#sidebar').innerHTML =
     '<div class="brand"><img src="/folio.svg" alt="">Folio</div><div class="sidebar-body">' +
-    '<button class="side-new" data-ui="' +
-    (state ? 'invite' : 'entry') +
-    '">' +
-    icon(state ? 'link' : 'plus', 17) +
-    (state ? t('Invite members', '邀请成员') : t('New session', '新建会话')) +
-    '</button>' +
+    (state?.kernelMode ? '' : actBtn(
+      state ? 'invite' : 'entry',
+      state ? t('Invite members', '邀请成员') : t('New session', '新建会话'),
+      'side-new', state ? 'link' : 'plus'
+    )) +
     '<button class="side-row ' +
     (!record ? 'on' : '') +
     '" data-record="0">' +
@@ -468,6 +468,10 @@ function openEntry() {
   create();
 }
 function create() {
+  const kernelChoice = address.kernelAvailable
+    ? '<label><input type="radio" name="mode" value="kernel" checked> ' + t('Play Kernel', '挑战 Kernel') +
+      '<small>' + t('Heads-up · 100 BB each hand', '单挑 · 每手 100 BB') + '</small></label>'
+    : '';
   modalFrame(
     'create',
     t('Create session', '创建会话'),
@@ -480,7 +484,7 @@ function create() {
         readPref('name', ''),
         'data-focus required maxlength="32" autocomplete="nickname"'
       ) +
-      '<div class="mode-choices"><label><input type="radio" name="mode" value="solo" checked> ' +
+      '<div class="mode-choices"><label><input type="radio" name="mode" value="solo"' + (address.kernelAvailable ? '' : ' checked') + '> ' +
       t('Solo practice', '单人练习') +
       '<small>' +
       t('One local opponent', '一位本地练习对手') +
@@ -488,7 +492,7 @@ function create() {
       t('With friends', '和朋友一起') +
       '<small>' +
       t('Invite up to 8 people', '最多邀请 8 位朋友') +
-      '</small></label></div><p class="hint">' +
+      '</small></label>' + kernelChoice + '</div><p class="hint">' +
       t(
         '100 BB buy-in · 0.5/1 BB blinds · Play chips only',
         '买入 100 BB · 盲注 0.5/1 BB · 虚拟筹码'
@@ -523,6 +527,7 @@ function join() {
 }
 function invite() {
   if (!state) return openEntry();
+  if (state.kernelMode) return;
   const origin =
     address.publicOrigin ||
     (['localhost', '127.0.0.1', '[::1]'].includes(location.hostname)
@@ -568,14 +573,14 @@ function manage() {
   if (host) {
     content +=
       '<div class="settings-block small-actions">' +
-      actBtn('addBot', t('Add local opponent', '添加本地 AI')) +
-      actBtn('addCloud', t('Add cloud opponent', '添加云端 AI')) +
-      actBtn(
+      (state.kernelMode ? '' : actBtn('addBot', t('Add local opponent', '添加本地 AI')) +
+        actBtn('addCloud', t('Add cloud opponent', '添加云端 AI'))) +
+      (state.kernelError ? actBtn('retryKernel', t('Retry Kernel', '重试 Kernel')) : actBtn(
         state.running ? 'pause' : 'start',
         state.running
           ? t('Pause after hand', '本手后暂停')
           : t('Start dealing', '开始发牌')
-      ) +
+      )) +
       '</div>' +
       '<details class="settings-block"><summary>' +
       t('Action timer', '行动计时') +
@@ -603,7 +608,8 @@ function manage() {
       ) +
       '</div>' +
       formEnd(t('Save timer', '保存计时设置')) +
-      '</form></details>' +
+      '</form></details>';
+    if (!state.kernelMode) content +=
       '<details class="settings-block" id="cloud-config"><summary>Ollama Cloud' +
       (cloud.configured ? ' · ' + t('Configured', '已配置') : '') +
       '</summary><form data-form="cloud" class="form-stack"><p class="hint">' +
@@ -629,7 +635,7 @@ function manage() {
       formEnd(t('Save connection', '保存连接')) +
       '</form></details>';
   }
-  if (me.status === 'standing')
+  if (me.status === 'standing' && !state.kernelMode)
     content +=
       '<form class="settings-block" data-form="rebuy">' +
       field(
@@ -648,7 +654,7 @@ function manage() {
     content +
       '<div class="form-actions">' +
       actBtn('leaveConfirm', t('Leave session', '离开会话')) +
-      actBtn('invite', t('Invite members', '邀请成员'), 'solid-btn', 'link') +
+      (state.kernelMode ? '' : actBtn('invite', t('Invite members', '邀请成员'), 'solid-btn', 'link')) +
       '</div>'
   );
   updatePeople();
@@ -716,7 +722,7 @@ function updatePeople() {
           ' · ' +
           num(p.stack) +
           ' BB</small></span>' +
-          (me.host
+          (me.host && !state.kernelMode
             ? personBtn('stack', p.id, t('Stack', '筹码')) +
               (p.id === me.id
                 ? ''
@@ -819,6 +825,7 @@ document.addEventListener('submit', async (event) => {
           type === 'create'
             ? await api('/api/create', {
                 name: data.name.trim(),
+                ...(data.mode === 'kernel' ? { mode: 'kernel' } : {}),
                 ...(expired && roomId ? { roomId } : {})
               })
             : await api('/api/rooms/' + roomId + '/join', {
@@ -899,6 +906,9 @@ document.addEventListener('click', async (event) => {
       render();
     },
     leave: () => command('leave'),
+    retryKernel: async () => {
+      if (await command('retryKernel')) closeModal();
+    },
     start: async () => {
       if (await command('start')) closeModal();
     },

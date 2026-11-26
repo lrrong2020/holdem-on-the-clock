@@ -226,25 +226,34 @@ function sizeInputs(ctx) {
   <div class="gw-presets">${presets.map(p=>`<button type="button" data-pct="${p}" aria-pressed="${ctx.pct===p}">${p}%</button>`).join('')}</div>
   <small id="gw-amount-hint" class="gw-amount-hint" ${invalid?'':'hidden'}>${hint}</small></div>`;
 }
+function kernelSizeInputs(choices, selected, t) {
+  const labels = {half:t('Half pot','半池'), pot:t('Pot','满池'), allin:t('All-in','全下')};
+  return `<div class="gw-sizing"><div class="gw-presets gw-kernel-sizes" role="group" aria-label="${t('Bet size','下注尺度')}">${choices.map(({label,amount}) =>
+    `<button type="button" data-kernel-size="${amount}" aria-pressed="${selected===amount}">${labels[label]} · ${bb(amount)} BB</button>`
+  ).join('')}</div></div>`;
+}
 function controls(ctx, t) {
-  const {me,hand,players} = ctx.state;
+  const {me,hand,players,kernelMode,kernelError} = ctx.state;
+  if (kernelError) {
+    return `<div class="gw-tool-actions"><span role="alert">${t('Kernel could not act. The hand is paused.','Kernel 未能行动，本手已暂停。')}</span><button data-cmd="retryKernel">${t('Retry Kernel','重试 Kernel')}</button></div>`;
+  }
   const buttons=[];
   if (me.auto) buttons.push(`<button data-cmd="back">${t("I'm back",'取消托管')}</button>`);
   const ready = players.filter(p=>p.status==='seated' && p.stack>0).length;
   if (me.host && (!hand || hand.street==='complete')) {
-    if (ready < 9) buttons.push(`<button data-cmd="addBot">${icon('bot',14)} ${t('Add practice player','添加练习对手')}</button>`);
+    if (!kernelMode && ready < 9) buttons.push(`<button data-cmd="addBot">${icon('bot',14)} ${t('Add practice player','添加练习对手')}</button>`);
     if (ready >=2 && !ctx.state.running) buttons.push(`<button class="gw-main-action" data-cmd="start">${t('Start dealing','开始发牌')}</button>`);
   }
   let size='';
   if (hand?.actorId===me.id && hand.legal) {
     const legal = hand.legal;
-    if (legal.fold) buttons.push(`<button data-play="fold">${t('Fold','弃牌')}</button>`);
+    if (legal.fold && !(kernelMode && legal.check)) buttons.push(`<button data-play="fold">${t('Fold','弃牌')}</button>`);
     if (legal.check) buttons.push(`<button data-play="check">${t('Check','过牌')}</button>`);
     if (legal.call) buttons.push(`<button data-play="call">${t('Call','跟注')} ${bb(legal.callAmount)}</button>`);
-    if (legal.raise) {
+    if (legal.raise && (!kernelMode || legal.kernelRaises?.length)) {
       const verb = legal.currentTo===0 ? t('Bet','下注') : t('Raise to','加注至');
       buttons.push(`<button type="button" data-play="${legal.currentTo===0?'bet':'raise'}" ${ctx.amount===null?'disabled':''}>${verb} <span class="gw-amount-text">${amountText(ctx.amount)}</span></button>`);
-      size=sizeInputs(ctx);
+      size=kernelMode ? kernelSizeInputs(legal.kernelRaises, ctx.amount, t) : sizeInputs(ctx);
     }
   }
   return `<div class="gw-tool-actions">${buttons.join('')}${ctx.state.clock ? '<span class="gw-clock">'+icon('timer',14)+' <span data-clock></span><progress class="gw-time-progress" max="1" aria-hidden="true"></progress></span>':''}</div>${size}`;
@@ -279,7 +288,7 @@ function renderTool(slot, ctx) {
 
   // A standing player may edit a rebuy while the rest of the table plays several turns.
   const rebuy = tool.querySelector('.gw-rebuy-controls');
-  const rebuyKey = me.status === 'standing' ? roomId + '.' + me.id : null;
+  const rebuyKey = !ctx.state.kernelMode && me.status === 'standing' ? roomId + '.' + me.id : null;
   if (rebuyKey !== ctx.rebuyKey) {
     ctx.rebuyKey = rebuyKey;
     ctx.rebuyDraft = '100';
@@ -298,7 +307,7 @@ function renderTool(slot, ctx) {
   const betweenHands = me.host && (!hand || hand.street === 'complete');
   const ready = betweenHands ? players.filter(p => p.status === 'seated' && p.stack > 0).length : 0;
   const key = JSON.stringify([turnKey, me.id, me.auto, hand?.actorId, hand?.legal,
-    Boolean(clock), betweenHands, ready, betweenHands && running]);
+    Boolean(clock), ctx.state.kernelError, betweenHands, ready, betweenHands && running]);
   if (decisions.dataset.context !== key) {
     decisions.innerHTML = controls(ctx, t);
     decisions.dataset.context = key;
@@ -322,7 +331,8 @@ function initDraft(ctx) {
   ctx.draftKey = key;
   ctx.pct = 50;
   const hand = ctx.state?.hand;
-  ctx.amount = hand?.legal?.raise ? presetAmount(hand, ctx.state.me.id, 50) : null;
+  if (ctx.state.kernelMode) ctx.amount = hand?.legal?.kernelRaises?.[0]?.amount ?? null;
+  else ctx.amount = hand?.legal?.raise ? presetAmount(hand, ctx.state.me.id, 50) : null;
   ctx.draftText = ctx.amount === null ? '' : amountText(ctx.amount);
 }
 function syncDraft(ctx, text, pct = null) {
@@ -359,19 +369,32 @@ async function onClick(ctx,event) {
   const cmd=b.dataset.cmd, play=b.dataset.play;
   if (cmd==='manage') return ctx.options.onManage?.();
   if (cmd==='history') return ctx.options.onHistory?.();
+  if (b.hasAttribute('data-kernel-size')) {
+    const amount = Number(b.dataset.kernelSize);
+    if (!ctx.state.hand.legal?.kernelRaises?.some(choice => choice.amount === amount)) return;
+    ctx.amount = amount;
+    ctx.root.querySelector('.gw-amount-text').textContent = amountText(amount);
+    ctx.root.querySelectorAll('[data-kernel-size]').forEach(button => {
+      button.setAttribute('aria-pressed', String(button === b));
+    });
+    return;
+  }
   if (b.dataset.pct) {
     const pct=Number(b.dataset.pct);
     syncDraft(ctx,amountText(presetAmount(ctx.state.hand,ctx.state.me.id,pct)),pct);
     return;
   }
-  if (!play && !['leave','addBot','start','back','rebuy'].includes(cmd)) return;
+  if (!play && !['leave','addBot','start','back','rebuy','retryKernel'].includes(cmd)) return;
   if (ctx.busy) return;
   let payload={};
   const amountAction = play==='bet' || play==='raise';
   if (play) {
     payload={turnKey:ctx.state.turnKey,action:{type:play}};
     if (amountAction) {
-      const amount = parseBetAmount(ctx.root.querySelector('.gw-amount').value, ctx.state.hand.legal);
+      const legal = ctx.state.hand.legal;
+      const amount = ctx.state.kernelMode
+        ? legal.kernelRaises?.find(choice => choice.amount === ctx.amount)?.amount ?? null
+        : parseBetAmount(ctx.root.querySelector('.gw-amount').value, legal);
       if (amount === null) return;
       payload.action.amount = amount;
     }
@@ -455,7 +478,7 @@ export function renderGame(root,state,options={}) {
   }
   initDraft(ctx);
   // Ignore polling timestamps. Patch the tool only when its visible game state changes.
-  const signature=JSON.stringify([pageKey,state.roomId,state.me,state.players,state.hand,state.turnKey,state.clock?.phase,state.running,state.history?.length]);
+  const signature=JSON.stringify([pageKey,state.roomId,state.me,state.players,state.hand,state.turnKey,state.clock?.phase,state.running,state.kernelError,state.history?.length]);
   if (pageChanged || ctx.markup!==signature) {
     ctx.markup=signature;
     const wasActing=ctx.ownTurn;

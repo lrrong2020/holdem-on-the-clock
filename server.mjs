@@ -43,7 +43,7 @@ function session(req) {
 function setSession(res, id, secret, secure) {
   res.setHeader('set-cookie', 'ws_session=' + secret + '; Path=/api/rooms/' + id + '; HttpOnly; SameSite=Strict' + (secure ? '; Secure' : '') + (secret ? '' : '; Max-Age=0'));
 }
-export function makeServer({publicOrigin = process.env.PUBLIC_ORIGIN, roomOptions = {}, staticDirectory = publicDirectory} = {}) {
+export function makeServer({publicOrigin = process.env.PUBLIC_ORIGIN, roomOptions = {}, kernel = null, staticDirectory = publicDirectory} = {}) {
   let origin = asOrigin(publicOrigin);
   const rooms = new Map();
   const quotas = new Map();
@@ -90,7 +90,7 @@ export function makeServer({publicOrigin = process.env.PUBLIC_ORIGIN, roomOption
         const local = loopback(req.socket.remoteAddress) && loopback(hostname) && !req.headers['x-forwarded-for'] && !req.headers['cf-connecting-ip'];
         const origins = local ? Object.values(networkInterfaces()).flat().filter(x => x.family === 'IPv4' && !x.internal)
           .map(x => 'http://' + x.address + ':' + server.address().port) : [];
-        return json(res,200,{origins,publicOrigin:origin});
+        return json(res,200,{origins,publicOrigin:origin,kernelAvailable:Boolean(kernel?.available)});
       }
       if (req.method === 'POST' && req.headers.origin) {
         const source = new URL(req.headers.origin);
@@ -104,7 +104,10 @@ export function makeServer({publicOrigin = process.env.PUBLIC_ORIGIN, roomOption
         const id = data.roomId ?? roomId();
         if (typeof id !== 'string' || !validId.test(id)) throw new RoomError('Invalid invitation.');
         if (rooms.has(id)) throw new RoomError('Room already exists.',409);
-        const room = new Room(id,data.name,roomOptions);
+        const kernelMode = data.mode === 'kernel';
+        if (kernelMode && !kernel?.available) throw new RoomError('Kernel is unavailable.',503);
+        const room = new Room(id,data.name,{...roomOptions, kernelMode, kernel:kernelMode ? kernel : null});
+        if (kernelMode) room.command(room.authenticate(room.hostSession),{type:'start'});
         rooms.set(id,room);
         setSession(res,id,room.hostSession,secure);
         return json(res,201,room.snapshot(room.authenticate(room.hostSession)));

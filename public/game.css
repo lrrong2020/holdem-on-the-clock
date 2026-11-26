@@ -67,6 +67,7 @@
 .gw-amount,.gw-rebuy {border:1px solid var(--gw-line);border-radius:4px;background:var(--surface,#fff);width:74px;color:var(--gw-ink);font:inherit;padding:3px 5px}
 .gw-range {width:100%;accent-color:var(--gw-purple)}
 .gw-presets {grid-column:1/-1;display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.gw-kernel-sizes {grid-template-columns:repeat(auto-fit,minmax(min(100%,90px),1fr))}
 .gw-presets button {border:1px solid var(--gw-line);background:var(--surface,#fff);font-size:12px}
 .gw-presets button[aria-pressed=true] {border-color:var(--gw-purple);color:var(--gw-purple)}
 .gw-status-panel {padding:16px}

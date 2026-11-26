@@ -94,3 +94,32 @@ test('background presence holds a seat without UI polling and tab close starts a
   time++;
   assert.equal((await fetch(url)).status,404);
 });
+
+test('only a server with a ready Kernel checkpoint can open a private two-seat match', async t => {
+  const kernel = {available:false, decide:async () => ({action:'call',trained:true})};
+  const server = makeServer({kernel, publicOrigin:null});
+  server.listen(0,'127.0.0.1');
+  await once(server,'listening');
+  t.after(() => {server.closeAllConnections(); server.close();});
+  const base = 'http://127.0.0.1:' + server.address().port;
+  const request = async (path, body) => fetch(base+path,body && {
+    method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)
+  });
+
+  assert.equal((await (await request('/api/address')).json()).kernelAvailable,false);
+  assert.equal((await request('/api/create',{name:'Player',mode:'kernel'})).status,503);
+  kernel.available = true;
+  assert.equal((await (await request('/api/address')).json()).kernelAvailable,true);
+  const response = await request('/api/create',{name:'Player',mode:'kernel'});
+  assert.equal(response.status,201);
+  const room = await response.json();
+  assert.equal(room.kernelMode,true);
+  assert.equal(room.hand.number,1);
+  assert.equal(room.players.filter(p => p.bot==='kernel').length,1);
+  assert.equal(room.hand.players.filter(p => p.id!==room.me.id)[0].cards.length,0);
+  const guest = await request('/api/rooms/'+room.roomId+'/join',{name:'Guest'});
+  assert.ok(guest.status>=400 && guest.status<500);
+  const standard = await (await request('/api/create',{name:'Player'})).json();
+  assert.equal(standard.kernelMode,false);
+  assert.equal(standard.hand,null);
+});

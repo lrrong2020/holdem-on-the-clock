@@ -1,4 +1,8 @@
 const chinese = {
+  'Kernel is unavailable.': 'Kernel 当前不可用，请检查本机 Kernel 服务。',
+  'Kernel practice is heads-up.': 'Kernel 练习仅支持单挑。',
+  'Choose an available Kernel action.': '请选择当前可用的下注选项。',
+  'No Kernel decision to retry.': '当前没有需要重试的 Kernel 行动。',
   'Use a name of 1–32 characters.': '请输入 1 至 32 个字符的昵称。',
   'That name is already in use.': '桌上已有同名成员，请换一个昵称。',
   'Room expired.': '本场已结束。',

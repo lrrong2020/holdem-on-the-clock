@@ -1,6 +1,7 @@
 import { randomBytes, randomInt } from 'node:crypto';
 import { startHand, act, viewHand, legalActions } from './engine.mjs';
 import { fetchCloudMove, localAction } from './opponents.mjs';
+import { kernelMoves } from './kernel-game.mjs';
 import { summarizeHistoryHand } from './public/hand-summary.js';
 
 export { fetchCloudMove };
@@ -16,6 +17,7 @@ function cleanName(value) {
 }
 function inRange(value, min, max) { return Number.isSafeInteger(value) && value >= min && value <= max; }
 const BUY_IN = 1000;
+const KERNEL_TURN_MS = 12000;
 const RECONNECT_GRACE_MS = 30000;
 const token = () => randomBytes(32).toString('base64url');
 export const roomId = () => randomBytes(15).toString('base64url');
@@ -23,7 +25,12 @@ const present = p => !p.bot && ['standing', 'seated'].includes(p.status);
 const safeAction = legal => ({type: legal.check ? 'check' : 'fold'});
 
 export class Room {
-  constructor(id, name, {now = Date.now, cloudMove = fetchCloudMove} = {}) {
+  constructor(id, name, {now = Date.now, cloudMove = fetchCloudMove, kernel = null, kernelMode = false} = {}) {
+    requireThat(!kernelMode || typeof kernel?.decide === 'function', 'Kernel is unavailable.', 503);
+    this.kernelMode = kernelMode;
+    this.kernel = kernelMode ? kernel : null;
+    this.kernelPath = [];
+    this.kernelError = '';
     this.id = id;
     this.now = now;
     this.cloudMove = cloudMove;
@@ -44,6 +51,10 @@ export class Room {
     this.hostId = host.id;
     this.hostSession = this.issueSession(host);
     this.seat(host, BUY_IN);
+    if (kernelMode) {
+      const opponent = this.member(host.name === 'Kernel' ? 'Kernel Bot' : 'Kernel', 'kernel', 'standing');
+      this.seat(opponent, BUY_IN);
+    }
   }
   member(value, bot, status) {
     const name = cleanName(value);
@@ -66,6 +77,7 @@ export class Room {
   }
   join(name, existing) {
     if (existing && this.sessions.has(existing)) return {user:this.authenticate(existing), secret:existing};
+    requireThat(!this.kernelMode, 'Kernel practice is heads-up.', 403);
     requireThat(this.members.size < 128 && this.requests.size < 32, 'Room has too many pending participants.', 429);
     const user = this.member(name, false, 'pending');
     this.requests.set(user.id, {id:user.id, name:user.name, kind:'join', amount:BUY_IN});
@@ -97,6 +109,7 @@ export class Room {
       number:(this.hand?.number || 0) + 1, previousButton:this.hand?.button ?? null,
       previousBigBlindId:this.hand?.players.find(p => p.position === 'BB')?.id
     });
+    this.kernelPath = [];
     this.nextAt = null;
     this.afterMove();
     return true;
@@ -106,15 +119,17 @@ export class Room {
     this.serial++;
     if (this.hand.street !== 'complete') {
       const startedAt = this.now();
-      this.clock = {phase:'base', startedAt, deadline:startedAt + this.settings.baseSeconds * 1000};
+      const kernelTurn = this.members.get(this.hand.actorId)?.bot === 'kernel';
+      const duration = kernelTurn ? KERNEL_TURN_MS : this.settings.baseSeconds * 1000;
+      this.clock = {phase:'base', startedAt, deadline:startedAt + duration};
       return;
     }
     for (const row of this.hand.players) {
       const user = this.members.get(row.id);
       if (!user) continue;
       if (user.status === 'departed') { this.members.delete(user.id); continue; }
-      user.stack = row.stack;
-      if (!row.stack) Object.assign(user, {status:'standing', seat:null});
+      user.stack = this.kernelMode ? BUY_IN : row.stack;
+      if (!user.stack) Object.assign(user, {status:'standing', seat:null});
     }
     this.history.set(this.hand.number, this.hand);
     this.clock = null;
@@ -123,12 +138,45 @@ export class Room {
   get turnKey() { return this.id + '.' + this.serial; }
   apply(id, action) {
     requireThat(action && ['fold','check','call','bet','raise'].includes(action.type), 'Choose a legal action.');
+    let kernelMove;
+    if (this.kernelMode) {
+      kernelMove = kernelMoves(this.hand, id).find(move => move.type === action.type && move.amount === action.amount);
+      requireThat(kernelMove, 'Choose an available Kernel action.', 409);
+    }
     try { act(this.hand, id, action); } catch (e) { throw new RoomError(e.message, 409); }
+    if (kernelMove) this.kernelPath.push(kernelMove.label);
     this.afterMove();
   }
   cancelWork() {
     this.work?.controller.abort();
     this.work = null;
+  }
+  stopKernelTurn() {
+    this.cancelWork();
+    this.kernelError = 'Kernel could not act. Retry the decision.';
+    this.clock = null;
+    this.serial++;
+  }
+  async askKernel(player) {
+    const key = this.turnKey;
+    const controller = new AbortController();
+    this.work = {key,controller};
+    const seat = this.hand.players.find(row => row.id === player.id);
+    const request = {
+      actions:[...this.kernelPath], cards:[...seat.cards],
+      board:[...this.hand.board], actor:seat.seat === this.hand.button ? 0 : 1
+    };
+    try {
+      const result = await this.kernel.decide(request,{signal:controller.signal});
+      if (this.closed || this.turnKey !== key || controller.signal.aborted) return;
+      this.tick();
+      if (this.closed || this.turnKey !== key) return;
+      const move = kernelMoves(this.hand, player.id).find(move => move.label === result.action);
+      requireThat(move, 'Invalid Kernel decision.');
+      this.apply(player.id, move);
+    } catch {
+      if (!this.closed && this.turnKey === key && !controller.signal.aborted) this.stopKernelTurn();
+    }
   }
   async askCloud(player) {
     const key = this.turnKey;
@@ -166,6 +214,12 @@ export class Room {
     }
     const actor = this.members.get(this.hand.actorId);
     if (!actor) throw new Error('Missing active seat');
+    if (actor.bot === 'kernel') {
+      if (this.kernelError) return;
+      if (now >= this.clock.deadline) this.stopKernelTurn();
+      else if (!this.work && now - this.clock.startedAt >= 750) void this.askKernel(actor);
+      return;
+    }
     while (now >= this.clock.deadline && !actor.auto) {
       if (actor.cards <= 0) { actor.auto = true; break; }
       actor.cards--;
@@ -201,10 +255,19 @@ export class Room {
   command(user, cmd) {
     requireThat(cmd && typeof cmd.type === 'string', 'Invalid command.');
     const host = user.id === this.hostId;
-    const admin = ['settings','cloud','approve','reject','remove','addBot','stack','start','pause','next'];
+    const admin = ['settings','cloud','approve','reject','remove','addBot','stack','start','pause','next','retryKernel'];
     if (admin.includes(cmd.type)) requireThat(host, 'Host approval required.', 403);
+    if (this.kernelMode) {
+      requireThat(['settings','start','pause','next','action','back','leave','retryKernel'].includes(cmd.type),
+        'Kernel practice is heads-up.', 403);
+    }
     const target = this.members.get(cmd.id);
     switch (cmd.type) {
+      case 'retryKernel':
+        requireThat(this.kernelMode && this.kernelError && this.inHand(), 'No Kernel decision to retry.', 409);
+        this.kernelError = '';
+        this.afterMove();
+        break;
       case 'settings': {
         const {baseSeconds, initialCards, cardSeconds} = cmd;
         requireThat(inRange(baseSeconds,1,600) && inRange(initialCards,0,100) && inRange(cardSeconds,1,600), 'Timer settings out of range.');
@@ -284,10 +347,16 @@ export class Room {
   snapshot(user) {
     const host = user.id === this.hostId;
     const allowed = present(user);
-    return {roomId:this.id, me:this.playerView(user), players:allowed ? [...this.members.values()]
+    const hand = allowed && this.hand ? viewHand(this.hand, user.id) : null;
+    if (this.kernelMode && hand?.legal) {
+      const moves = kernelMoves(this.hand, user.id);
+      const raises = moves.filter(move => move.amount !== undefined).map(({label,amount}) => ({label,amount}));
+      hand.legal = {...hand.legal, fold:!hand.legal.check, raise:raises.length > 0, kernelRaises:raises};
+    }
+    return {roomId:this.id, kernelMode:this.kernelMode, kernelError:this.kernelError, me:this.playerView(user), players:allowed ? [...this.members.values()]
       .filter(p => ['seated','standing'].includes(p.status)).map(p => this.playerView(p)) : [],
       requests:host ? [...this.requests.values()] : [], myRequest:this.requests.get(user.id) || null,
-      hand:allowed && this.hand ? viewHand(this.hand, user.id) : null,
+      hand,
       turnKey:this.turnKey, clock:allowed ? this.clock : null, serverNow:this.now(), settings:this.settings,
       cloud:{configured:Boolean(this.cloud.key),primary:host ? this.cloud.primary : '',fallback:host ? this.cloud.fallback : ''},
       history:allowed ? [...this.history.keys()].reverse() : [], running:this.running,nextAt:this.running ? this.nextAt : null};

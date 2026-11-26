@@ -9,6 +9,8 @@
   },
   "scripts": {
     "start": "node server.mjs",
+    "start:kernel": "node scripts/kernel.mjs",
+    "test:kernel": "node test/kernel-browser.mjs",
     "test": "node --test test/*.test.mjs",
     "test:e2e": "node test/browser.mjs && node test/nine-seat-browser.mjs && node test/editor-browser.mjs && node test/review-browser.mjs && node test/focus-browser.mjs chromium && node test/workspace-browser.mjs chromium && node test/divider-browser.mjs chromium",
     "start:online": "node scripts/online.mjs",

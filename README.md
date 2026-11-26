@@ -8,6 +8,28 @@ by [lrrong2020](https://github.com/lrrong2020)
 
 Your friend raises to 6 BB from a terminal full of test results. You call from the margin of a document. Someone else at the table has a chat window open. You’re all playing the same hand. Hold’em on the Clock is a self-hosted, no-limit Texas Hold’em game for two to nine players, with play chips. There’s a computer opponent for the days nobody else can sneak in a hand.
 
+## 挑战 Kernel · Play Kernel
+
+在本地分支上可以与 `low-fi-poker-bot` 训练好的 Kernel 单挑。将两个项目放在同一目录下，在本项目中运行：
+
+Play heads-up against the checkpoint in your local `low-fi-poker-bot` project. With both projects in the same parent folder, run:
+
+```sh
+npm run start:kernel
+```
+
+打开 [Kernel 牌桌](http://127.0.0.1:4180)，选择 **创建会话 → 挑战 Kernel**。每手双方从 100 BB 开始，轮流坐庄。下注可选半池、满池或全下。每个下注轮最多两次主动下注或加注。
+
+Open the [local table](http://127.0.0.1:4180). Select **Create session → Play Kernel**. Each hand starts 100 BB deep and the button alternates. Bet or raise half pot, full pot or all-in. Each street allows at most two bets or raises in total.
+
+如果两个项目不在一起，设置 `KERNEL_BOT_DIR` 或把 bot 项目路径传给启动命令。 / If the bot lives elsewhere, set `KERNEL_BOT_DIR` or pass its folder to the launcher:
+
+```sh
+npm run start:kernel -- "/path/to/low-fi-poker-bot"
+```
+
+需要 Python 3.10+、Clang 或 GCC，以及该 bot 的本地 `model/checkpoint.pkl`。Python 环境可通过 `KERNEL_PYTHON` 指定。 / The bot needs Python 3.10+, Clang or GCC, and its local `model/checkpoint.pkl`. Set `KERNEL_PYTHON` to use a specific Python interpreter.
+
 ## Screenshots
 
 ### 终端 · Terminal
@@ -196,6 +218,8 @@ npx playwright install chromium webkit
 npm run test:e2e
 npm run test:webkit
 ```
+
+Kernel 服务启动后，可用 `npm run test:kernel` 在浏览器中对战真实模型。 / With the Kernel server running, use `npm run test:kernel` to play a browser test hand against the local checkpoint.
 
 ## License
 
