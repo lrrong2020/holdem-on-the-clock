@@ -7,6 +7,7 @@
 @property(nonatomic, strong) NSTask *server;
 @property(nonatomic, strong) NSFileHandle *input;
 @property(nonatomic, strong) NSURL *table;
+@property(nonatomic, strong) dispatch_semaphore_t exited;
 @end
 
 @implementation TableLauncher
@@ -40,12 +41,11 @@ static NSString *label(NSString *english, NSString *chinese) {
     NSPipe *output = [NSPipe pipe];
     task.standardOutput = output;
     task.standardError = [NSFileHandle fileHandleWithStandardError];
+    self.exited = dispatch_semaphore_create(0);
     task.terminationHandler = ^(NSTask *finished) {
+        dispatch_semaphore_signal(self.exited);
         dispatch_async(dispatch_get_main_queue(), ^{
-            if (self.stopping) {
-                [NSApp replyToApplicationShouldTerminate:YES];
-                return;
-            }
+            if (self.stopping) return;
             [self fail:label(@"The local server stopped. Open the app again to start a new table.",
                              @"本机服务已停止。重新打开应用即可开桌。")];
         });
@@ -124,14 +124,16 @@ static NSString *label(NSString *english, NSString *chinese) {
 }
 
 - (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)app {
-    if (self.stopping) return NSTerminateLater;
     self.stopping = YES;
     if (!self.server.running) return NSTerminateNow;
     [self.input closeFile];
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 3 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-        if (self.server.running) [self.server terminate];
-    });
-    return NSTerminateLater;
+    if (dispatch_semaphore_wait(self.exited, dispatch_time(DISPATCH_TIME_NOW, 2 * NSEC_PER_SEC)) && self.server.running) {
+        [self.server terminate];
+        if (dispatch_semaphore_wait(self.exited, dispatch_time(DISPATCH_TIME_NOW, NSEC_PER_SEC)) && self.server.running) {
+            kill(self.server.processIdentifier, SIGKILL);
+        }
+    }
+    return NSTerminateNow;
 }
 
 - (void)applicationWillTerminate:(NSNotification *)notification {

@@ -14,9 +14,9 @@ Your friend raises to 6 BB from a terminal full of test results. You call from t
 
 | 电脑 / Computer | 安装包 / Installer |
 | --- | --- |
-| Mac，Apple 芯片（M 系列） / Apple silicon | [下载 Mac 安装包 · Apple silicon][mac-arm] |
-| Mac，Intel 处理器 / Intel | [下载 Mac 安装包 · Intel][mac-intel] |
-| Windows，Intel 或 AMD 64 位 / Windows x64 | [下载 Windows 安装包 · x64][win-x64] |
+| Mac，Apple 芯片（M 系列） / Apple silicon · macOS 14+ | [下载 Mac 安装包 · Apple silicon][mac-arm] |
+| Mac，Intel 处理器 / Intel · macOS 14+ | [下载 Mac 安装包 · Intel][mac-intel] |
+| Windows 10/11，Intel 或 AMD 64 位 / Windows x64 | [下载 Windows 安装包 · x64][win-x64] |
 
 **第一次开桌**
 
