@@ -1,12 +1,29 @@
 /* Card id = rank * 4 + suit. Scores increase with hand strength. */
 #include <stdint.h>
 
+#ifdef _MSC_VER
+#include <intrin.h>
+static int top_rank(unsigned mask) {
+    unsigned long index;
+    _BitScanReverse(&index, mask);
+    return (int)index;
+}
+static int popcount(unsigned mask) {
+    int n = 0;
+    while (mask) { mask &= mask - 1; ++n; }
+    return n;
+}
+#else
+
 static int top_rank(unsigned mask) {
     return 31 - __builtin_clz(mask);
 }
 
+static int popcount(unsigned mask) { return __builtin_popcount(mask); }
+#endif
+
 static unsigned best_ranks(unsigned mask, int count) {
-    while (__builtin_popcount(mask) > count)
+    while (popcount(mask) > count)
         mask &= mask - 1;
     return mask;
 }
@@ -30,7 +47,7 @@ int score7(const unsigned char *cards) {
         suits[cards[i] % 4] |= bit;
     }
     for (int suit = 0; suit < 4; ++suit) {
-        if (__builtin_popcount(suits[suit]) >= 5) {
+        if (popcount(suits[suit]) >= 5) {
             int high = straight(suits[suit]);
             if (high >= 0) return (8 << 26) + high;
             /* Seven cards cannot contain a flush alongside quads or a full house. */
@@ -46,7 +63,7 @@ int score7(const unsigned char *cards) {
     if (high >= 0) return (4 << 26) + high;
     if (trips)
         return (3 << 26) + (trip << 13) + best_ranks(ranks ^ trips, 2);
-    if (__builtin_popcount(pairs) >= 2) {
+    if (popcount(pairs) >= 2) {
         unsigned two = best_ranks(pairs, 2);
         return (2 << 26) + (two << 13) + best_ranks(ranks ^ two, 1);
     }

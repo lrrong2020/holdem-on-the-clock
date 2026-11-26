@@ -1,0 +1,86 @@
+name: Desktop installers
+on:
+  push:
+    branches: [feature/kernel-opponent]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and play on ${{ matrix.platform }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macOS-arm64
+            runner: macos-15
+            asset: Holdem-on-the-Clock-macOS-arm64.dmg
+          - platform: macOS-x64
+            runner: macos-15-intel
+            asset: Holdem-on-the-Clock-macOS-x64.dmg
+          - platform: Windows-x64
+            runner: windows-2025
+            asset: Holdem-on-the-Clock-Windows-x64.exe
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r scripts/desktop/requirements.txt
+      - run: python scripts/desktop/build-runtime.py payload
+      - if: runner.os == 'macOS'
+        run: bash scripts/desktop/macos/build.sh payload dist
+      - if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $version = (Get-Content -Raw package.json | ConvertFrom-Json).version
+          ./scripts/desktop/windows/build.ps1 -Payload payload -Version $version -Output dist
+      - if: runner.os == 'macOS'
+        run: bash scripts/desktop/macos/test.sh "dist/${{ matrix.asset }}"
+      - if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./scripts/desktop/windows/test.ps1 -Installer "dist/${{ matrix.asset }}"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ${{ matrix.platform }}
+          path: dist/${{ matrix.asset }}
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 3
+
+  release:
+    name: Publish tested installers
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Publish on GitHub Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          test "v$(node -p 'require("./package.json").version')" = "$TAG"
+          cd dist
+          sha256sum *.dmg *.exe > SHA256SUMS.txt
+          gh release create "$TAG" *.dmg *.exe SHA256SUMS.txt --verify-tag --latest \
+            --title "摸鱼德州 · Hold’em on the Clock $TAG" --notes-file ../scripts/desktop/release.md

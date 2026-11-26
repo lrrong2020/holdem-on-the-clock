@@ -7,9 +7,13 @@ const actions = new Set(['fold', 'call', 'half', 'pot', 'allin']);
 
 // One worker holds one checkpoint for all tables. Requests carry their full
 // history so an aborted or superseded turn cannot advance another table.
-export async function startKernel(directory, {python = process.env.KERNEL_PYTHON || 'python3'} = {}) {
-  if (typeof directory !== 'string' || !directory) throw new Error('Set the local Kernel directory.');
-  const child = spawn(python, ['-I', '-B', '-u', script, directory], {
+export async function startKernel(directory, {
+  python = process.env.KERNEL_PYTHON || 'python3',
+  executable = process.env.KERNEL_WORKER_EXECUTABLE
+} = {}) {
+  if (!executable && (typeof directory !== 'string' || !directory)) throw new Error('Set the local Kernel directory.');
+  const child = spawn(executable || python, executable ? [] : ['-I', '-B', '-u', script, directory], {
+    windowsHide: true,
     stdio: ['pipe', 'pipe', 'ignore']
   });
   const lines = createInterface({input: child.stdout, crlfDelay: Infinity});

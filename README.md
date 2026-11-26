@@ -2,29 +2,46 @@
 
 by [lrrong2020](https://github.com/lrrong2020)
 
-[中文开桌指南](#中文) · [English quick start](#english) · [截图 / Screenshots](#screenshots)
+[下载安装 / Download & play](#downloads) · [截图 / Screenshots](#screenshots) · [中文源码指南](#中文) · [English source guide](#english)
 
 上班时牌瘾来了，想找搭子单挑？朋友那边满屏都是测试日志，刚从终端加注到 6 BB。你还开着那份评审文档，在右边的批注栏点了跟注。两个人看着完全不同的屏幕，打的是同一手牌。摸鱼德州用虚拟筹码打无限注德州扑克，单挑到九人桌都行。搭子还没来？先跟电脑打两手。
 
 Your friend raises to 6 BB from a terminal full of test results. You call from the margin of a document. Someone else at the table has a chat window open. You’re all playing the same hand. Hold’em on the Clock is a self-hosted, no-limit Texas Hold’em game for two to nine players, with play chips. There’s a computer opponent for the days nobody else can sneak in a hand.
 
-## 挑战 Kernel · Play Kernel
+## Downloads
 
-这个分支自带训练好的 Kernel 单挑模型。在 macOS 或 Linux 上准备好 Node.js、Python 3.10+ 和 C 编译器（Clang 或 GCC），在项目目录运行下面的命令。第一次启动会编译牌力计算器。
+选你的电脑，点右边的安装包。 / Choose your computer and download the installer.
 
-This branch includes the trained heads-up model. On macOS or Linux, install Node.js, Python 3.10 or later, and Clang or GCC. Run this command in the project folder. The first run compiles the hand evaluator.
+| 电脑 / Computer | 安装包 / Installer |
+| --- | --- |
+| Mac，Apple 芯片（M 系列） / Apple silicon | [下载 Mac 安装包 · Apple silicon][mac-arm] |
+| Mac，Intel 处理器 / Intel | [下载 Mac 安装包 · Intel][mac-intel] |
+| Windows，Intel 或 AMD 64 位 / Windows x64 | [下载 Windows 安装包 · x64][win-x64] |
 
-```sh
-npm run start:kernel
-```
+**第一次开桌**
 
-打开[本机牌桌](http://127.0.0.1:4180)，点 **创建会话**，输入昵称，选 **挑战 Kernel**。每手双方从 100 BB 开始，轮流坐庄。下注尺度有半池、满池和全下，每轮最多两次主动下注或加注。
+1. **Mac** 打开下载的 DMG，把 **Hold’em on the Clock** 拖到 **Applications（应用程序）**。不确定该下载哪一版？点屏幕左上角的苹果菜单，打开「关于本机」查看芯片。**Windows** 双击下载的 EXE，按安装窗口提示完成安装。
+2. Mac 从「应用程序」打开游戏。Windows 从「开始」菜单打开游戏。浏览器会自动打开 **Folio**。
+3. 点右上角 **中文**，再点 **创建会话**。输入昵称，保留 **挑战 Kernel**，点窗口底部的 **创建会话**。看到两张底牌就可以打了。
 
-Open the [local table](http://127.0.0.1:4180). Select **Create session**, enter your nickname and choose **Play Kernel**. Each hand starts 100 BB deep. The button alternates. Each street allows up to two bets or raises, sized at half pot, full pot or all-in.
+想和身边的朋友玩？开桌时选 **和朋友一起**。朋友连上同一 Wi-Fi 后，把 **邀请成员** 里的链接发给他们。在 **会话设置** 中批准入座，点 **开始发牌**。朋友用浏览器加入即可。
 
-想试自己的模型，可将兼容的本地 bot 项目路径传给 `npm run start:kernel -- "/path/to/low-fi-poker-bot"`，也可设置 `KERNEL_BOT_DIR`。用 `KERNEL_PYTHON` 指定 Python 解释器。
+**Your first hand**
 
-To use your own compatible bot, run `npm run start:kernel -- "/path/to/low-fi-poker-bot"` or set `KERNEL_BOT_DIR`. Set `KERNEL_PYTHON` to select a Python interpreter.
+1. **On a Mac**, open the DMG. Drag **Hold’em on the Clock** to **Applications**. To check your chip, open **Apple menu → About This Mac**. **On Windows**, open the EXE. Follow the installer steps.
+2. Open **Hold’em on the Clock** from Applications on Mac or the Start menu on Windows. **Folio** opens in your browser.
+3. Select **Create session**. Enter your nickname. Keep **Play Kernel** selected. Select **Create session** again. Your two hole cards appear.
+
+To play with friends on the same Wi-Fi, choose **With friends**. Share the link under **Invite members**. Approve each guest under **Session settings**, then select **Start dealing**. Guests only need a browser.
+
+<details>
+<summary>系统提示「未经验证的开发者」 / Unverified publisher</summary>
+
+此版没有 Apple 公证或 Windows 发布者签名。请核对下载来自[本仓库的 Releases][releases]。如果 macOS 阻止打开，尝试打开应用一次，然后到「系统设置 → 隐私与安全性」按 Apple 的步骤允许该应用。如果单位电脑限制安装，联系设备管理员。[Apple 官方说明][gatekeeper]
+
+This release has no Apple notarization or Windows publisher signature. Check that your download came from [this project's Releases][releases]. If macOS blocks the app, try opening it once. Then follow Apple's steps in **System Settings → Privacy & Security**. On a managed computer, ask your administrator if installation is restricted. [Apple support][gatekeeper]
+
+</details>
 
 ## Screenshots
 
@@ -54,9 +71,9 @@ Give any document a new title and write it in Markdown. Your cards stay in the m
 
 ## 中文
 
-### 第一次开桌
+### 从源码开桌
 
-只有开桌的人需要安装软件。朋友收到邀请后，用手机或电脑的浏览器就能入座。
+已经装好桌面版，可以直接[开桌](#downloads)。下面的步骤适合想运行源码或搭建跨网络牌桌的房主。源码版运行内置模型时用 `npm run start:kernel`，需要 Python 3.10+ 和 Clang 或 GCC。
 
 1. 在开桌的电脑上安装 **Node.js 24 LTS**。Windows 选 `.msi` 安装包，macOS 选 `.pkg`。使用默认安装选项即可。[Node.js 下载页][node]
 2. 下载游戏压缩包。[下载 ZIP][zip]
@@ -125,9 +142,9 @@ Give any document a new title and write it in Markdown. Your cards stay in the m
 
 ## English
 
-### Set up your first table
+### Run from source
 
-Only the host needs to install software. Everyone else joins from a phone or computer with a browser.
+For the desktop app, use the [installer steps](#downloads). Follow the steps below to run from source or host across networks. To use the bundled opponent from source, run `npm run start:kernel` with Python 3.10+ and Clang or GCC installed.
 
 1. On the host computer, install **Node.js 24 LTS**. On Windows, use the `.msi` installer. On macOS, use the `.pkg` installer. Keep the default settings. [Download Node.js][node]
 2. Download the game. [Download ZIP][zip]
@@ -199,6 +216,8 @@ Solo practice uses a local opponent. To play against a cloud model, open **Sessi
 
 已有 Node.js 20.3 或更高版本也可以启动游戏。默认端口是 `4173`，可用 `PORT` 更改。要限制为本机访问，可在运行 `npm start` 前设置 `HOST=127.0.0.1`。若已配置固定域名隧道，将它指向本机服务，并将 `PUBLIC_ORIGIN` 设为该域名的 HTTPS 地址。
 
+To use a custom Kernel from source, pass its local project folder to `npm run start:kernel -- "/path/to/low-fi-poker-bot"` or set `KERNEL_BOT_DIR`.
+
 The game runs on Node.js 20.3 or later. Set `PORT` to change the default port (`4173`). For local access only, set `HOST=127.0.0.1` before you run `npm start`. For a fixed domain, point your named tunnel at the local server. Set `PUBLIC_ORIGIN` to the HTTPS address for that domain.
 
 </details>
@@ -228,3 +247,9 @@ The game uses Apache License 2.0. The bundled Markdown parser, Marked, uses the 
 [cf-arm]: https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-arm64.pkg
 [cf-intel]: https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-amd64.pkg
 [cloudflared]: https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/
+
+[releases]: https://github.com/lrrong2020/holdem-on-the-clock/releases/latest
+[mac-arm]: https://github.com/lrrong2020/holdem-on-the-clock/releases/latest/download/Holdem-on-the-Clock-macOS-arm64.dmg
+[mac-intel]: https://github.com/lrrong2020/holdem-on-the-clock/releases/latest/download/Holdem-on-the-Clock-macOS-x64.dmg
+[win-x64]: https://github.com/lrrong2020/holdem-on-the-clock/releases/latest/download/Holdem-on-the-Clock-Windows-x64.exe
+[gatekeeper]: https://support.apple.com/102445

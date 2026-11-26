@@ -46,7 +46,8 @@ def decide(kernel, root, state, rng, request):
 
 def run(directory):
     directory = Path(directory).resolve(strict=True)
-    sys.path.insert(0, str(directory))
+    if not getattr(sys, "frozen", False):
+        sys.path.insert(0, str(directory))
     import main as kernel
     from game import ROOT
     from cards import equity
@@ -68,4 +69,4 @@ def run(directory):
 
 
 if __name__ == "__main__":
-    run(sys.argv[1])
+    run(sys._MEIPASS if getattr(sys, "frozen", False) else sys.argv[1])

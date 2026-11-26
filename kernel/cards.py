@@ -16,8 +16,7 @@ import tempfile
 import time
 
 
-@lru_cache(maxsize=1)
-def _native():
+def _source_library():
     source = Path(__file__).with_name("cards_native.c")
     tag = hashlib.sha256(source.read_bytes()).hexdigest()[:12]
     cache = source.parent / "__pycache__"
@@ -30,6 +29,16 @@ def _native():
             subprocess.run([os.environ.get("CC", "cc"), "-O3", "-std=c99", "-fPIC",
                             flag, str(source), "-o", str(output)], check=True)
             os.replace(output, lib)
+    return lib
+
+
+@lru_cache(maxsize=1)
+def _native():
+    if getattr(sys, "frozen", False):
+        filename = "cards_native.dll" if os.name == "nt" else "cards_native.so"
+        lib = Path(sys._MEIPASS) / filename
+    else:
+        lib = _source_library()
     dll = ctypes.CDLL(str(lib))
     ptr = ctypes.POINTER(ctypes.c_ubyte)
     dll.equity_mc.argtypes = [ptr, ctypes.c_int, ctypes.c_int]
