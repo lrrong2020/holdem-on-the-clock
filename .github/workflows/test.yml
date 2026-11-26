@@ -20,3 +20,11 @@ jobs:
       - run: npx playwright install --with-deps chromium webkit
       - run: npm run test:e2e
       - run: npm run test:webkit
+      - name: Play against the bundled Kernel
+        run: |
+          node scripts/kernel.mjs &
+          kernel_pid=$!
+          trap 'kill "$kernel_pid" 2>/dev/null || true' EXIT
+          curl --fail --silent --retry 15 --retry-delay 1 --retry-connrefused http://127.0.0.1:4180/api/address > /dev/null
+          npm run test:kernel
+          npm run test:kernel -- webkit

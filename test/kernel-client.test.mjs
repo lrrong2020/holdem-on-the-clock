@@ -1,9 +1,13 @@
 import assert from 'node:assert/strict';
-import {mkdtemp, rm, symlink, writeFile} from 'node:fs/promises';
+import {appendFile, copyFile, mkdir, mkdtemp, rm, writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
-import {join, resolve} from 'node:path';
+import {join} from 'node:path';
 import {test} from 'node:test';
+import {fileURLToPath} from 'node:url';
 import {startKernel} from '../kernel-client.mjs';
+
+const bundledKernel = fileURLToPath(new URL('../kernel/', import.meta.url));
+const kernelPlatform = ['darwin','linux'].includes(process.platform);
 
 test('the worker checks startup, correlates concurrent replies, and releases pending turns', {
   skip: process.platform === 'win32' && 'Kernel requires macOS or Linux'
@@ -47,22 +51,39 @@ lines.on('line', line => {
   await assert.rejects(worker.decide({action:'call'}), /worker stopped/);
 });
 
-test('the installed checkpoint returns legal moves on both sides of the flop', {
-  skip: !process.env.KERNEL_BOT_DIR && 'Set KERNEL_BOT_DIR to exercise a local checkpoint'
+test('the bundled checkpoint rejects missing data and changes to a valid pickle', {
+  skip: !kernelPlatform && 'Kernel requires macOS or Linux'
 }, async t => {
-  const directory = await mkdtemp(join(tmpdir(), 'kernel missing checkpoint '));
+  const directory = await mkdtemp(join(tmpdir(), 'kernel integrity '));
   t.after(() => rm(directory, {recursive:true, force:true}));
-  for (const name of ['main.py','game.py','cards.py','solver.py']) {
-    await symlink(resolve(process.env.KERNEL_BOT_DIR, name), join(directory, name));
+  for (const name of ['main.py','game.py','cards.py','solver.py','cards_native.c']) {
+    await copyFile(join(bundledKernel, name), join(directory, name));
   }
+  await mkdir(join(directory, 'model'));
+  const checkpoint = join(directory, 'model', 'checkpoint.pkl');
   await assert.rejects(startKernel(directory), /start Kernel/);
 
-  const worker = await startKernel(process.env.KERNEL_BOT_DIR);
+  await copyFile(join(bundledKernel, 'model', 'checkpoint.pkl'), checkpoint);
+  const valid = await startKernel(directory);
+  await valid.close();
+  // pickle.load accepts trailing data. The bundled digest covers the entire file.
+  await appendFile(checkpoint, '\n');
+  await assert.rejects(startKernel(directory), /start Kernel/);
+});
+
+test('the bundled opponent finds trained preflop and postflop decisions', {
+  skip: !kernelPlatform && 'Kernel requires macOS or Linux'
+}, async t => {
+  const worker = await startKernel(bundledKernel);
   t.after(() => worker.close());
   const preflop = {actions:[], cards:['As','5c'], board:[], actor:0};
   const flop = {actions:['call','call'], cards:['Ks','5h'], board:['Qs','9s','3s'], actor:1};
-  assert.ok(['fold','call','half','pot','allin'].includes((await worker.decide(preflop)).action));
-  assert.ok(['call','half','pot','allin'].includes((await worker.decide(flop)).action));
+  const opening = await worker.decide(preflop);
+  const flopDecision = await worker.decide(flop);
+  assert.equal(opening.trained, true);
+  assert.equal(flopDecision.trained, true);
+  assert.ok(['fold','call','half','pot','allin'].includes(opening.action));
+  assert.ok(['call','half','pot','allin'].includes(flopDecision.action));
   await assert.rejects(worker.decide({...flop, actor:0}), /could not decide/);
   await assert.rejects(worker.decide({...flop, board:[]}), /could not decide/);
   await assert.rejects(worker.decide({...flop, cards:['3s','Ad']}), /could not decide/);

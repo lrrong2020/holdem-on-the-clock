@@ -10,25 +10,21 @@ Your friend raises to 6 BB from a terminal full of test results. You call from t
 
 ## 挑战 Kernel · Play Kernel
 
-在本地分支上可以与 `low-fi-poker-bot` 训练好的 Kernel 单挑。将两个项目放在同一目录下，在本项目中运行：
+这个分支自带训练好的 Kernel 单挑模型。在 macOS 或 Linux 上准备好 Node.js、Python 3.10+ 和 C 编译器（Clang 或 GCC），在项目目录运行下面的命令。第一次启动会编译牌力计算器。
 
-Play heads-up against the checkpoint in your local `low-fi-poker-bot` project. With both projects in the same parent folder, run:
+This branch includes the trained heads-up model. On macOS or Linux, install Node.js, Python 3.10 or later, and Clang or GCC. Run this command in the project folder. The first run compiles the hand evaluator.
 
 ```sh
 npm run start:kernel
 ```
 
-打开 [Kernel 牌桌](http://127.0.0.1:4180)，选择 **创建会话 → 挑战 Kernel**。每手双方从 100 BB 开始，轮流坐庄。下注可选半池、满池或全下。每个下注轮最多两次主动下注或加注。
+打开[本机牌桌](http://127.0.0.1:4180)，点 **创建会话**，输入昵称，选 **挑战 Kernel**。每手双方从 100 BB 开始，轮流坐庄。下注尺度有半池、满池和全下，每轮最多两次主动下注或加注。
 
-Open the [local table](http://127.0.0.1:4180). Select **Create session → Play Kernel**. Each hand starts 100 BB deep and the button alternates. Bet or raise half pot, full pot or all-in. Each street allows at most two bets or raises in total.
+Open the [local table](http://127.0.0.1:4180). Select **Create session**, enter your nickname and choose **Play Kernel**. Each hand starts 100 BB deep. The button alternates. Each street allows up to two bets or raises, sized at half pot, full pot or all-in.
 
-如果两个项目不在一起，设置 `KERNEL_BOT_DIR` 或把 bot 项目路径传给启动命令。 / If the bot lives elsewhere, set `KERNEL_BOT_DIR` or pass its folder to the launcher:
+想试自己的模型，可将兼容的本地 bot 项目路径传给 `npm run start:kernel -- "/path/to/low-fi-poker-bot"`，也可设置 `KERNEL_BOT_DIR`。用 `KERNEL_PYTHON` 指定 Python 解释器。
 
-```sh
-npm run start:kernel -- "/path/to/low-fi-poker-bot"
-```
-
-需要 Python 3.10+、Clang 或 GCC，以及该 bot 的本地 `model/checkpoint.pkl`。Python 环境可通过 `KERNEL_PYTHON` 指定。 / The bot needs Python 3.10+, Clang or GCC, and its local `model/checkpoint.pkl`. Set `KERNEL_PYTHON` to use a specific Python interpreter.
+To use your own compatible bot, run `npm run start:kernel -- "/path/to/low-fi-poker-bot"` or set `KERNEL_BOT_DIR`. Set `KERNEL_PYTHON` to select a Python interpreter.
 
 ## Screenshots
 
