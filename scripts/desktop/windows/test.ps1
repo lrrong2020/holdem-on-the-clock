@@ -15,7 +15,8 @@ try {
     if (!(Test-Path -LiteralPath $exe) -or !(Test-Path -LiteralPath $uninstall)) { throw 'The installer did not create the application.' }
 
     # Exercise the packaged runtime, including a hand against the actual model.
-    & node "$PSScriptRoot/../smoke.mjs" $installDir
+    $smokeScript = (Get-Item -LiteralPath (Join-Path $PSScriptRoot '..\smoke.mjs')).FullName
+    & node $smokeScript $installDir
     if ($LASTEXITCODE -ne 0) { throw 'Installed runtime smoke test failed.' }
 
     $launcher = Start-Process $exe -ArgumentList '--no-browser' -RedirectStandardOutput $log -PassThru

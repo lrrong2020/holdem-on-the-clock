@@ -73,7 +73,7 @@ Give any document a new title and write it in Markdown. Your cards stay in the m
 
 ### 从源码开桌
 
-已经装好桌面版，可以直接[开桌](#downloads)。下面的步骤适合想运行源码或搭建跨网络牌桌的房主。源码版运行内置模型时用 `npm run start:kernel`，需要 Python 3.10+ 和 Clang 或 GCC。
+已经装好桌面版，可以直接[开桌](#downloads)。下面的步骤适合想运行源码或搭建跨网络牌桌的房主。要从源码单挑 Kernel，先安装 Python 3.10+ 和 Clang 或 GCC，再运行 `npm run start:kernel`。在这台电脑打开 <http://127.0.0.1:4180>，创建会话时选「挑战 Kernel」。
 
 1. 在开桌的电脑上安装 **Node.js 24 LTS**。Windows 选 `.msi` 安装包，macOS 选 `.pkg`。使用默认安装选项即可。[Node.js 下载页][node]
 2. 下载游戏压缩包。[下载 ZIP][zip]
@@ -144,7 +144,7 @@ Give any document a new title and write it in Markdown. Your cards stay in the m
 
 ### Run from source
 
-For the desktop app, use the [installer steps](#downloads). Follow the steps below to run from source or host across networks. To use the bundled opponent from source, run `npm run start:kernel` with Python 3.10+ and Clang or GCC installed.
+For the desktop app, use the [installer steps](#downloads). Follow the steps below to run from source or host across networks. To play Kernel from source, install Python 3.10+ and Clang or GCC. Run `npm run start:kernel`. Open <http://127.0.0.1:4180> on the same computer and select **Play Kernel** when you create a session.
 
 1. On the host computer, install **Node.js 24 LTS**. On Windows, use the `.msi` installer. On macOS, use the `.pkg` installer. Keep the default settings. [Download Node.js][node]
 2. Download the game. [Download ZIP][zip]

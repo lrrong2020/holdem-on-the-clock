@@ -12,9 +12,13 @@ foreach ($item in 'node.exe','app/desktop.mjs','kernel-worker/kernel-worker.exe'
 }
 if ($Version -notmatch '^v?\d+\.\d+\.\d+(?:[-+][0-9a-zA-Z.-]+)?$') { throw "Unexpected version: $Version" }
 
-$csc = Join-Path $env:WINDIR 'Microsoft.NET/Framework64/v4.0.30319/csc.exe'
-& $csc /nologo /noconfig /target:winexe /platform:x64 /optimize+ /codepage:65001 "/out:$payloadDir/HoldemOnTheClock.exe" /reference:System.dll /reference:System.Windows.Forms.dll /reference:System.Drawing.dll "$PSScriptRoot/Launcher.cs"
-if ($LASTEXITCODE -ne 0) { throw 'Windows launcher build failed.' }
+$csc = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
+$launcherExe = Join-Path $payloadDir 'HoldemOnTheClock.exe'
+Push-Location -LiteralPath $PSScriptRoot
+try {
+    & $csc /nologo /noconfig /target:winexe /platform:x64 /optimize+ /codepage:65001 "/out:$launcherExe" /reference:System.dll /reference:System.Windows.Forms.dll /reference:System.Drawing.dll Launcher.cs
+    if ($LASTEXITCODE -ne 0) { throw 'Windows launcher build failed.' }
+} finally { Pop-Location }
 
 $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6/ISCC.exe'
 if (!(Test-Path -LiteralPath $iscc)) {
@@ -32,5 +36,6 @@ if (!(Test-Path -LiteralPath $iscc)) {
         $iscc = Join-Path $tools 'ISCC.exe'
     } else { throw 'Install Inno Setup 6 or add ISCC.exe to PATH.' }
 }
-& $iscc /Qp "/DReleaseVersion=$($Version.TrimStart('v'))" "/DPayloadDir=$payloadDir" "/DArtifactDir=$artifactDir" "$PSScriptRoot/installer.iss"
+$installerScript = (Get-Item -LiteralPath (Join-Path $PSScriptRoot 'installer.iss')).FullName
+& $iscc /Qp "/DReleaseVersion=$($Version.TrimStart('v'))" "/DPayloadDir=$payloadDir" "/DArtifactDir=$artifactDir" $installerScript
 if ($LASTEXITCODE -ne 0) { throw 'Windows installer build failed.' }

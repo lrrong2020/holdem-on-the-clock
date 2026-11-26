@@ -80,7 +80,8 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           test "v$(node -p 'require("./package.json").version')" = "$TAG"
+          sed "s/RELEASE_TAG/$TAG/g" scripts/desktop/release.md > "$RUNNER_TEMP/release.md"
           cd dist
           sha256sum *.dmg *.exe > SHA256SUMS.txt
           gh release create "$TAG" *.dmg *.exe SHA256SUMS.txt --verify-tag --latest \
-            --title "摸鱼德州 · Hold’em on the Clock $TAG" --notes-file ../scripts/desktop/release.md
+            --title "摸鱼德州 · Hold’em on the Clock $TAG" --notes-file "$RUNNER_TEMP/release.md"
