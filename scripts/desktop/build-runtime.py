@@ -18,7 +18,7 @@ KERNEL = ROOT / "kernel"
 def windows_library(work):
     shutil.copyfile(KERNEL / "cards_native.c", work / "cards_native.c")
     command = ["cl", "/nologo", "/O2", "/MT", "/LD", "/std:c11", "cards_native.c",
-               "/link", "/OUT:cards_native.dll", "/EXPORT:score7", "/EXPORT:equity_mc"]
+               "/link", "/OUT:cards_native.dll", "/EXPORT:score7", "/EXPORT:equity_mc", "/EXPORT:equity_v2"]
     if shutil.which("cl"):
         subprocess.run(command, cwd=work, check=True)
     else:

@@ -3,10 +3,10 @@
 import hashlib
 import pickle
 
-import cards
+from checkpoint import FORMAT, checkpoint_metadata
 
 REVEALED = (0, 3, 4, 5)
-CHECKPOINT_SHA256 = "57e7adf1b2ff9935091b75974697018c2fef49b2b98692a21560fe4fa047dc39"
+CHECKPOINT_SHA256 = "33e9e3e47e064c64b50819f2ba3ae83790c63b85e926f7e78f8eb6e5f5c273cb"
 
 
 def load_checkpoint(folder):
@@ -15,8 +15,10 @@ def load_checkpoint(folder):
     if hashlib.sha256(data).hexdigest() != CHECKPOINT_SHA256:
         raise ValueError("Bundled Kernel checkpoint checksum mismatch.")
     state = pickle.loads(data)
-    if state["format"] != 1:
+    if state["format"] != FORMAT:
         raise ValueError("Unsupported Kernel checkpoint format.")
+    if state.get("metadata") != checkpoint_metadata(state["model"]):
+        raise ValueError("Bundled Kernel game or card abstraction mismatch.")
     return state
 
 
@@ -39,8 +41,7 @@ class HandView:
     def equity(self, actor, street):
         key = (actor, street)
         if key not in self.equities:
-            self.equities[key] = cards.equity(self.holes[actor], self.board[:REVEALED[street]],
-                                              self.model.rollouts)
+            self.equities[key] = self.model.equity(self.holes[actor], self.board[:REVEALED[street]])
         return self.equities[key]
 
 

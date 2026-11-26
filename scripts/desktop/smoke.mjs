@@ -2,11 +2,17 @@
 import assert from 'node:assert/strict';
 import {spawn} from 'node:child_process';
 import {once} from 'node:events';
+import {readFile} from 'node:fs/promises';
 import {join,resolve} from 'node:path';
 import {createInterface} from 'node:readline';
 import {setTimeout as delay} from 'node:timers/promises';
 
 const payload = resolve(process.argv[2]);
+const [packagedCheckpoint, sourceCheckpoint] = await Promise.all([
+  readFile(join(payload, 'kernel-worker', '_internal', 'model', 'checkpoint.pkl')),
+  readFile(new URL('../../kernel/model/checkpoint.pkl', import.meta.url))
+]);
+assert.ok(packagedCheckpoint.equals(sourceCheckpoint), 'Installed checkpoint must match the release checkpoint');
 const bin = join(payload, process.platform === 'win32' ? 'node.exe' : 'node');
 const env = {...process.env};
 for (const key of Object.keys(env)) {

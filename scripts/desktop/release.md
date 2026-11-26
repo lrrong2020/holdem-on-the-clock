@@ -12,7 +12,9 @@ On a Mac, open **Apple menu → About This Mac**. Choose **Apple silicon** for a
 2. Open the app. Folio opens in your browser.
 3. Select **Create session**, enter your nickname, choose **Play Kernel**, and select **Create session** again.
 
-安装包已内置游戏和模型，可离线单挑。系统可能提示开发者未经验证。 / The installers include the game and its trained model for offline play. Your system may show an unverified-publisher notice. [安装说明 / Installation guide](https://github.com/lrrong2020/holdem-on-the-clock#downloads)
+本版内置 Kernel v2，可离线单挑。到了河牌，Kernel 会计算对手所有可能的 990 种底牌组合。首次打开时，系统可能提示开发者未经验证。
+
+This release includes Kernel v2 for offline heads-up play. On the river, it calculates equity against all 990 possible opposing hands. Your system may show an unverified-publisher notice on first launch. [安装说明 / Installation guide](https://github.com/lrrong2020/holdem-on-the-clock#downloads)
 
 [win]: https://github.com/lrrong2020/holdem-on-the-clock/releases/download/RELEASE_TAG/Holdem-on-the-Clock-Windows-x64.exe
 [arm]: https://github.com/lrrong2020/holdem-on-the-clock/releases/download/RELEASE_TAG/Holdem-on-the-Clock-macOS-arm64.dmg

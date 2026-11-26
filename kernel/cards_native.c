@@ -121,3 +121,52 @@ double equity_mc(const unsigned char *visible, int board_len, int rollouts) {
     }
     return score / (2.0 * rollouts);
 }
+
+/* Canonical labels sort the four suits by their (hole ranks, board ranks).
+   Tied signatures have identical visible cards in both groups, so their order
+   has no effect on the resulting hole or board mask used by equity_mc. */
+static void canonicalize_suits(const unsigned char *visible, int n, unsigned char *out) {
+    unsigned signature[4] = {0};
+    for (int i = 0; i < n; ++i) {
+        unsigned card = visible[i];
+        signature[card % 4] |= 1u << ((card / 4) + (i < 2 ? 13 : 0));
+    }
+    unsigned suit_id[4] = {0};
+    for (int s = 0; s < 4; ++s) {
+        for (int other = 0; other < 4; ++other) {
+            if (signature[other] < signature[s] ||
+                (signature[other] == signature[s] && other < s))
+                ++suit_id[s];
+        }
+    }
+    for (int i = 0; i < n; ++i)
+        out[i] = (visible[i] & ~3u) + suit_id[visible[i] % 4];
+}
+
+static double river_equity(const unsigned char *visible) {
+    uint64_t used = 0;
+    unsigned char deck[45], opponent[7];
+    for (int i = 0; i < 7; ++i) used |= UINT64_C(1) << visible[i];
+    for (int i = 2; i < 7; ++i) opponent[i] = visible[i];
+    int remaining = 0;
+    for (int c = 0; c < 52; ++c) {
+        if (!(used & (UINT64_C(1) << c))) deck[remaining++] = c;
+    }
+    int hero = score7(visible), half_wins = 0;
+    for (int a = 0; a < remaining; ++a) {
+        opponent[0] = deck[a];
+        for (int b = a + 1; b < remaining; ++b) {
+            opponent[1] = deck[b];
+            int villain = score7(opponent);
+            half_wins += 2 * (hero > villain) + (hero == villain);
+        }
+    }
+    return half_wins / (2.0 * 990);
+}
+
+double equity_v2(const unsigned char *visible, int board_len, int rollouts) {
+    if (board_len == 5) return river_equity(visible);
+    unsigned char canonical[7];
+    canonicalize_suits(visible, board_len + 2, canonical);
+    return equity_mc(canonical, board_len, rollouts);
+}

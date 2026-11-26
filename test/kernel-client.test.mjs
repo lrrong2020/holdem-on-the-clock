@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
+import {execFile} from 'node:child_process';
 import {appendFile, copyFile, mkdir, mkdtemp, rm, writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {test} from 'node:test';
 import {fileURLToPath} from 'node:url';
+import {promisify} from 'node:util';
 import {startKernel} from '../kernel-client.mjs';
 
 const bundledKernel = fileURLToPath(new URL('../kernel/', import.meta.url));
@@ -51,12 +53,12 @@ lines.on('line', line => {
   await assert.rejects(worker.decide({action:'call'}), /worker stopped/);
 });
 
-test('the bundled checkpoint rejects missing data and changes to a valid pickle', {
+test('the bundled checkpoint rejects missing data, changed betting rules and changes to a valid pickle', {
   skip: !kernelPlatform && 'Kernel requires macOS or Linux'
 }, async t => {
   const directory = await mkdtemp(join(tmpdir(), 'kernel integrity '));
   t.after(() => rm(directory, {recursive:true, force:true}));
-  for (const name of ['main.py','game.py','cards.py','solver.py','cards_native.c']) {
+  for (const name of ['main.py','game.py','cards.py','solver.py','checkpoint.py','cards_native.c']) {
     await copyFile(join(bundledKernel, name), join(directory, name));
   }
   await mkdir(join(directory, 'model'));
@@ -66,9 +68,19 @@ test('the bundled checkpoint rejects missing data and changes to a valid pickle'
   await copyFile(join(bundledKernel, 'model', 'checkpoint.pkl'), checkpoint);
   const valid = await startKernel(directory);
   await valid.close();
+  await appendFile(join(directory, 'game.py'), '\nMAX_RAISES += 1\n');
+  await assert.rejects(startKernel(directory), /start Kernel/);
+  await copyFile(join(bundledKernel, 'game.py'), join(directory, 'game.py'));
   // pickle.load accepts trailing data. The bundled digest covers the entire file.
   await appendFile(checkpoint, '\n');
   await assert.rejects(startKernel(directory), /start Kernel/);
+});
+
+test('Kernel v2 uses suit-invariant card features and exact river equity', {
+  skip: !kernelPlatform && 'Source Kernel requires macOS or Linux'
+}, async () => {
+  const script = fileURLToPath(new URL('./kernel-card-features.py', import.meta.url));
+  await promisify(execFile)(process.env.KERNEL_PYTHON || 'python3', ['-I','-B',script]);
 });
 
 test('the bundled opponent finds trained preflop and postflop decisions', {

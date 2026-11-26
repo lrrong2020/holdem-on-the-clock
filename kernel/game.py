@@ -2,10 +2,13 @@
 from dataclasses import dataclass
 from itertools import count
 
+SB = 1
 BB = 2
 START = 100 * BB
+MAX_RAISES = 2
 STREETS = ("preflop", "flop", "turn", "river")
 _CODES = {"fold": "f", "call": "c", "half": "h", "pot": "p", "allin": "a"}
+ACTIONS = tuple(_CODES)
 
 
 @dataclass(slots=True, eq=False)
@@ -55,7 +58,7 @@ def _build(street, actor, stacks, bets, raises, min_raise, closes_on_call, histo
         choices["fold"] = 0
     choices["call"] = to_call
 
-    if raises < 2 and stacks[actor] > to_call and stacks[other] > 0:
+    if raises < MAX_RAISES and stacks[actor] > to_call and stacks[other] > 0:
         # Size raises from the pot after calling. Round half chips upward.
         called_pot = node.pot + to_call
         prior = to_call
@@ -97,4 +100,4 @@ def _build(street, actor, stacks, bets, raises, min_raise, closes_on_call, histo
     return node
 
 
-ROOT = _build(0, 0, (START - 1, START - BB), (1, BB), 0, BB, False, "", count())
+ROOT = _build(0, 0, (START - SB, START - BB), (SB, BB), 0, BB, False, "", count())

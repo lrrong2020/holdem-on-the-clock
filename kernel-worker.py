@@ -53,7 +53,8 @@ def run(directory):
     from cards import equity
 
     # A ready worker can handle a postflop decision as well as a preflop lookup.
-    state = kernel.load_checkpoint(directory / "model")
+    model_dir = getattr(kernel, "DEFAULT_MODEL_DIR", directory / "model")
+    state = kernel.load_checkpoint(model_dir)
     equity((0, 1), (2, 3, 4), 1)
     rng = random.Random()
     send({"ready": True, "iterations": state["solver"].iterations})

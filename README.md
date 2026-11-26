@@ -10,7 +10,7 @@ Your friend raises to 6 BB from a terminal full of test results. You call from t
 
 ## Downloads
 
-选你的电脑，点右边的安装包。 / Choose your computer and download the installer.
+安装包内置 Kernel v2，离线也能单挑。选你的电脑下载。 / Download the installer for your computer to play heads-up against Kernel v2 offline.
 
 | 电脑 / Computer | 安装包 / Installer |
 | --- | --- |

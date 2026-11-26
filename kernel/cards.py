@@ -15,6 +15,9 @@ import sys
 import tempfile
 import time
 
+LEGACY_FEATURE_VERSION = 1
+FEATURE_VERSION = 2
+
 
 def _source_library():
     source = Path(__file__).with_name("cards_native.c")
@@ -43,6 +46,8 @@ def _native():
     ptr = ctypes.POINTER(ctypes.c_ubyte)
     dll.equity_mc.argtypes = [ptr, ctypes.c_int, ctypes.c_int]
     dll.equity_mc.restype = ctypes.c_double
+    dll.equity_v2.argtypes = dll.equity_mc.argtypes
+    dll.equity_v2.restype = ctypes.c_double
     dll.score7.argtypes = [ptr]
     dll.score7.restype = ctypes.c_int
     return dll
@@ -81,13 +86,24 @@ def showdown(holes, board):
     return -1 if first == second else int(second > first)
 
 
-def equity(hole, board, rollouts=64):
-    """Heads-up showdown equity. Hidden opponent/board are resampled every trial."""
+def equity(hole, board, rollouts=64, feature_version=FEATURE_VERSION):
+    """Visible-card showdown equity against a uniform legal hand."""
     if len(hole) != 2 or len(board) not in (0, 3, 4, 5):
         raise ValueError("expected two hole cards and a board of length 0, 3, 4, or 5")
     if not 1 <= rollouts <= 2**31 - 1:
         raise ValueError("invalid rollout count")
-    return _native().equity_mc(_array((*hole, *board)), len(board), rollouts)
+    if feature_version == FEATURE_VERSION:
+        estimate = _native().equity_v2
+    elif feature_version == LEGACY_FEATURE_VERSION:
+        estimate = _native().equity_mc
+    else:
+        raise ValueError(f"Unsupported card feature version {feature_version}")
+    return estimate(_array((*hole, *board)), len(board), rollouts)
+
+
+def legacy_equity(hole, board, rollouts=64):
+    """Original suit-dependent Monte Carlo estimate used by the benchmark opponent."""
+    return equity(hole, board, rollouts, LEGACY_FEATURE_VERSION)
 
 
 def preflop(hole):
@@ -129,22 +145,33 @@ def _kmeans(values, k):
 class CardModel:
     rollouts: int
     centers: tuple  # flop, turn, river; ascending equity within each street
+    feature_version: int = FEATURE_VERSION
+
+    def __setstate__(self, state):
+        # An unversioned instance was fit using the original estimator.
+        restored = self.from_dict(state)
+        self.__dict__.update(restored.__dict__)
+
+    def equity(self, hole, board):
+        return equity(hole, board, self.rollouts, self.feature_version)
 
     def bucket(self, hole, board):
         if not board:
             return preflop(hole)
-        value = equity(hole, board, self.rollouts)
+        value = self.equity(hole, board)
         return _nearest(self.centers[len(board) - 3], value)
 
     def to_dict(self):
-        return {"rollouts": self.rollouts, "centers": self.centers}
+        return {"rollouts": self.rollouts, "centers": self.centers,
+                "feature_version": self.feature_version}
 
     @classmethod
     def from_dict(cls, data):
-        return cls(data["rollouts"], tuple(tuple(row) for row in data["centers"]))
+        return cls(data["rollouts"], tuple(tuple(row) for row in data["centers"]),
+                   data.get("feature_version", LEGACY_FEATURE_VERSION))
 
 
-def preprocess(seed, n_deals=5000, rollouts=64, n_buckets=16, max_seconds=300):
+def preprocess(seed, n_deals=5000, rollouts=256, n_buckets=16, max_seconds=300):
     """Return fitted card model and (buckets[player][street], winner) samples."""
     start = time.monotonic()
     if n_deals < 1 or n_buckets < 1 or max_seconds <= 0:
